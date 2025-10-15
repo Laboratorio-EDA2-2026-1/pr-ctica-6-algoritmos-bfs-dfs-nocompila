@@ -133,6 +133,8 @@ if len(todas) > 0:
     resp = resp.lower()
     if resp == "s":
         imprimir_todas(todas)
+
 #EJERCICO 2 CON PUNTO EXTRA 
+
 
 
