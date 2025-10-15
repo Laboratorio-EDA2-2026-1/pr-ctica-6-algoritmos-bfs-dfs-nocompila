@@ -301,3 +301,256 @@ def main():
 
 main()
 
+#-------------------------------------------------- EJERCICIO 3: INTERVALO --------------------------------------------------
+
+from typing import List, Optional, Tuple
+
+#Busca en el Arreglo los valores mas cercanos (por arriba y por abajo) a q usando dfsBsucar y devuelve los indices de estos en el arreglo
+def intervaloIndices(arreglo: List[int], numeroQ: float) -> List[int]:
+    # Validaciones
+    n = len(arreglo)
+    if n <= 0:
+        raise ValueError("El arreglo debe tener N > 0")
+    if numeroQ < 0:
+        raise ValueError("El numero q no puede ser negativo")
+
+    #Guardamos pares (valor, índice) para no perder posiciones
+    paresValorIndice = []
+    i = 0
+    while i < n:
+        par = (arreglo[i], i)
+        paresValorIndice.append(par)
+        i = i + 1
+
+    #Regresa el mejor valor menor/igual a q y el valor igual/mayor a q
+    def dfsBuscar(ini: int, fin: int) -> Tuple[Optional[Tuple[int, int]], Optional[Tuple[int, int]]]:
+        if fin - ini == 1:
+            valor = paresValorIndice[ini][0]
+            indice = paresValorIndice[ini][1]
+            candidatoInferior = None
+            candidatoSuperior = None
+            if valor <= numeroQ:
+                candidatoInferior = (valor, indice)
+            if valor >= numeroQ:
+                candidatoSuperior = (valor, indice)
+            return candidatoInferior, candidatoSuperior
+
+        medio = ini + (fin - ini) // 2
+        inferiorIzq, superiorIzq = dfsBuscar(ini, medio)
+        inferiorDer, superiorDer = dfsBuscar(medio, fin)
+
+        mejorInferior = inferiorIzq
+        if inferiorDer is not None:
+            if mejorInferior is None:
+                mejorInferior = inferiorDer
+            else:
+                if inferiorDer[0] > mejorInferior[0]:
+                    mejorInferior = inferiorDer
+
+        mejorSuperior = superiorIzq
+        if superiorDer is not None:
+            if mejorSuperior is None:
+                mejorSuperior = superiorDer
+            else:
+                if superiorDer[0] < mejorSuperior[0]:
+                    mejorSuperior = superiorDer
+
+        return mejorInferior, mejorSuperior
+
+    mejorInferior, mejorSuperior = dfsBuscar(0, n)
+
+    #Si q coincide exactamente con un valor, usamos el mismo índice
+    if mejorInferior is not None and mejorSuperior is not None and mejorInferior[0] == mejorSuperior[0]:
+        indice = mejorInferior[1]
+        return [indice, indice]
+
+    #Si falta un lado, repetimos el disponible
+    if mejorInferior is None and mejorSuperior is not None:
+        return [mejorSuperior[1], mejorSuperior[1]]
+    if mejorSuperior is None and mejorInferior is not None:
+        return [mejorInferior[1], mejorInferior[1]]
+
+    #Ambos lados existen
+    if mejorInferior is not None and mejorSuperior is not None:
+        return [mejorInferior[1], mejorSuperior[1]]
+
+    raise RuntimeError("No se pudo determinar el intervalo.")
+
+#Ejemplo
+if __name__ == "__main__":
+    numeroQ = 8.13
+    arreglo = [4, 0, 7, 11, 9, 12, 56, 3]
+    posiciones = intervaloIndices(arreglo, numeroQ)
+    print(posiciones)
+
+#-------------------------------------------------- EJERCICIO 4: Mapa de Romania --------------------------------------------------
+
+# Construimos el mapa de Rumania como diccionario de adyacencias
+def construirGrafo():
+    grafo = {}
+    grafo["Arad"] = [("Zerind", 75), ("Sibiu", 140), ("Timisoara", 118)]
+    grafo["Zerind"] = [("Arad", 75), ("Oradea", 71)]
+    grafo["Oradea"] = [("Zerind", 71), ("Sibiu", 151)]
+    grafo["Sibiu"] = [("Arad", 140), ("Oradea", 151), ("Fagaras", 99), ("Rimnicu Vilcea", 80)]
+    grafo["Fagaras"] = [("Sibiu", 99), ("Bucharest", 211)]
+    grafo["Rimnicu Vilcea"] = [("Sibiu", 80), ("Pitesti", 97), ("Craiova", 146)]
+    grafo["Pitesti"] = [("Rimnicu Vilcea", 97), ("Bucharest", 101), ("Craiova", 138)]
+    grafo["Bucharest"] = [("Fagaras", 211), ("Pitesti", 101), ("Giurgiu", 90), ("Urziceni", 85)]
+    grafo["Giurgiu"] = [("Bucharest", 90)]
+    grafo["Urziceni"] = [("Bucharest", 85), ("Vaslui", 142), ("Hirsova", 98)]
+    grafo["Vaslui"] = [("Urziceni", 142), ("Iasi", 92)]
+    grafo["Iasi"] = [("Vaslui", 92), ("Neamt", 87)]
+    grafo["Neamt"] = [("Iasi", 87)]
+    grafo["Hirsova"] = [("Urziceni", 98), ("Eforie", 86)]
+    grafo["Eforie"] = [("Hirsova", 86)]
+    grafo["Timisoara"] = [("Arad", 118), ("Lugoj", 111)]
+    grafo["Lugoj"] = [("Timisoara", 111), ("Mehadia", 70)]
+    grafo["Mehadia"] = [("Lugoj", 70), ("Drobeta", 75)]
+    grafo["Drobeta"] = [("Mehadia", 75), ("Craiova", 120)]
+    grafo["Craiova"] = [("Drobeta", 120), ("Rimnicu Vilcea", 146), ("Pitesti", 138)]
+    return grafo
+
+#Usamos el algoritmo BFS para encontrar el camino con menos aristas
+def bfsCamino(grafo, inicio, meta):
+    visitados = set()
+    cola = []
+    #Diccionario que nos ayuda a recordar la ruta
+    padres = {}
+    cola.append(inicio)
+    visitados.add(inicio)
+    while len(cola) > 0:
+        actual = cola.pop(0)
+        if actual == meta:
+            return reconstruir(padres, inicio, meta)
+        vecinos = grafo.get(actual, [])
+        i = 0
+        while i < len(vecinos):
+            vecino = vecinos[i][0]
+            if vecino not in visitados:
+                visitados.add(vecino)
+                padres[vecino] = actual
+                cola.append(vecino)
+            i = i + 1
+    return []
+
+# Reconstruye nuestro camino que guardamos en Padres (vamos de la meta al inicio e invertimos la lista)
+def reconstruir(padres, inicio, meta):
+    camino = []
+    ciudad = meta
+    while True:
+        camino.append(ciudad)
+        if ciudad == inicio:
+            break
+        ciudad = padres.get(ciudad, None)
+        if ciudad is None:
+            return []
+    camino.reverse()
+    return camino
+
+# Convierte la hora ingresada por el usuario a minutos
+def horaMinutos(horaTexto):
+    horaTexto = horaTexto.strip()
+    #Si la hora esta en HH:MM, la divimos en horas y minutos
+    if ":" in horaTexto:
+        partes = horaTexto.split(":")
+        h = int(partes[0])
+        m = int(partes[1])
+        #obtenemos los minutos totales
+        return h * 60 + m
+    #si nos dan el numero de horas, unicamente la pasamos a minutos
+    numero = float(horaTexto)
+    h = int(numero)
+    m = int(round((numero - h) * 60))
+    return h * 60 + m
+
+#Cambiamos nuestros minutos al formato HH:MM
+def minutosHora(minutosAbs):
+    minutosAbs = minutosAbs % 1440
+    h = minutosAbs // 60
+    m = minutosAbs % 60
+    hTxt = str(h).rjust(2, "0")
+    mTxt = str(m).rjust(2, "0")
+    return hTxt + ":" + mTxt
+
+#Definimos el comportamiento del tiempo segun los intervalos del dia
+def factorPorHora(minutoAbs):
+    t = minutoAbs % 1440
+    if t < 360:
+        return 1.0
+    if t < 960:
+        return 2.0
+    return 1.5
+
+#Esto es mas que nada para evitar usar fracciones de minutos (Segundos) si es que se llegan a presentar
+def redondeo(x):
+    entero = int(x)
+    if x == entero:
+        return entero
+    return entero + 1
+
+#Buscamos el tiempo que hay entre dos ciudades
+def obtenerTiempo(grafo, a, b):
+    vecinos = grafo.get(a, [])
+    i = 0
+    while i < len(vecinos):
+        if vecinos[i][0] == b:
+            return vecinos[i][1]
+        i = i + 1
+    return None
+
+#Calculamos el tiempo sin considerar los intervalos del dia
+def tiempoRecorrido(grafo, camino):
+    total = 0
+    i = 0
+    while i < len(camino) - 1:
+        a = camino[i]
+        b = camino[i + 1]
+        w = obtenerTiempo(grafo, a, b)
+        total = total + w
+        i = i + 1
+    return total
+
+#Calculamos el tiempo total considerando los intervalos del dia
+
+def timepoTotal(grafo, camino, inicioAbs):
+    baseTotal = tiempoRecorrido(grafo, camino)
+    factor = factorPorHora(inicioAbs)
+    totalReal = baseTotal * factor
+    totalReal = redondeo(totalReal)
+    llegadaAbs = inicioAbs + totalReal
+    return totalReal, llegadaAbs
+
+
+# Funcion principal: Le preguntamos al usuario los datos
+def main():
+    grafo = construirGrafo()
+    print("Ciudades de Romania:")
+    for nombre in sorted(grafo.keys()):
+        print("-", nombre)
+    origen = input("En que ciudad estas: ").strip()
+    destino = input("A que ciudad quieres ir: ").strip()
+    horaTexto = input("Cual es tu hora de salida (HH:MM o 13.5): ").strip()
+
+    #Caso donde el usuario ingresa mal el nombre de una ciudad o una que no existe
+    if origen not in grafo or destino not in grafo:
+        print("Una ciudad no existe en el mapa")
+        return
+
+    salidaAbs = horaMinutos(horaTexto)
+    camino = bfsCamino(grafo, origen, destino)
+
+    #Consideramos que no es posible llegar entre las ciudades (muy poco probable)
+    if len(camino) == 0:
+        print("No hay camino entre las ciudades")
+        return
+
+    totalMin, llegadaAbs = timepoTotal(grafo, camino, salidaAbs)
+    
+    #Imprimimos el tiempo y el camino
+    print("Camino elegido (BFS):", " -> ".join(camino))
+    print("Tiempo total:", totalMin, "minutos")
+    print("Hora estimada de llegada:", minutosHora(llegadaAbs))
+
+if __name__ == "__main__":
+    main()
+    
